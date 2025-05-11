@@ -2,10 +2,80 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import placeholder from '~/assets/placeholder.svg'
-import { Link, useNavigate } from "react-router";
+import { data, Form, Link, redirect, useNavigate } from "react-router";
 import { Label } from '~/components/ui/label';
+import type { Route } from "./+types/login.page";
+import { commitSession, getSession } from "~/sessions.server";
+import { use, useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Terminal } from "lucide-react";
 
-const LoginPage = () => {
+
+export const loader = async ({ context, params, request }: Route.LoaderArgs) => {
+    // no se ha cargado el componente => ejecuta en el servidor
+    const session = await getSession(request.headers.get('Cookie'));
+    console.log('LoginLoader - userId exists in session?', session.has('userId'));
+
+    if (session.has('userId')) {
+        return redirect('/chat');
+    }
+    
+    // Crea respuesta que contienen el status y headers sin forsar la serializacion de la respuesta
+    return data( 
+        { error: session.get("error") },
+        {
+            headers: {
+                "Set-Cookie": await commitSession(session), // set el cookie
+            },
+        }
+    );
+}
+
+
+    export async function action({ request, context, params }: Route.ActionArgs) {
+        console.log('Server - action called'); 
+        const session = await getSession(
+            request.headers.get("Cookie")
+        );
+        const form = await request.formData();
+        const email = form.get("email");
+        const password = form.get("password");
+        console.log('Form', form);
+
+        if (email === 'viktor1103@gmail.com'){
+            session.flash('error', 'Invalid Email');
+            // return redirect('/auth/login?error=Invalid Email', {
+            //     headers: {
+            //         'Set-Cookie': await commitSession(session),
+            //     },
+            // });
+            return data({ error: 'Invalid Email' }, {
+                headers: {
+                    "Set-Cookie": await commitSession(session),
+                },
+                status: 400,
+                statusText: 'Bad Request',
+            });
+        }
+
+        session.set('userId', 'U1-12345');
+        session.set('token', 'token-1234567890');
+        return redirect('/chat', {
+            headers: {
+                'Set-Cookie': await commitSession(session),
+            },
+        });
+    
+        // const userId = await validateCredentials(
+        // username,
+        // password
+        // );
+    }
+
+const LoginPage = ({ loaderData, actionData, params }: Route.ComponentProps) => {
+
+    console.log('LoginPage => actionData', actionData);
+    
 
     const navigate = useNavigate();
 
@@ -13,11 +83,17 @@ const LoginPage = () => {
         navigate('/auth/testing')
     }
 
+    useEffect(() => {
+        if (actionData!.error) {
+            alert(actionData!.error);
+        }
+    }, [actionData?.error]);
+
     return (
         <div className={'flex flex-col gap-6'}>
             <Card className="overflow-hidden p-0">
                 <CardContent className="grid p-0 md:grid-cols-2">
-                <form className="p-6 md:p-8">
+                <Form className="p-6 md:p-8" action="/auth/login" method="post">
                     <div className="flex flex-col gap-6">
                     <div className="flex flex-col items-center text-center">
                         <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -25,7 +101,7 @@ const LoginPage = () => {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="m@example.com" required />
+                        <Input id="email" name="email" type="email" placeholder="m@example.com" required />
                     </div>
                     <div className="grid gap-2">
                         <div className="flex items-center">
@@ -34,7 +110,7 @@ const LoginPage = () => {
                             Forgot your password?
                         </a>
                         </div>
-                        <Input id="password" type="password" required />
+                        <Input id="password" name="password" type="password" required />
                     </div>
                     <Button type="submit" className="w-full">
                         Login
@@ -78,7 +154,7 @@ const LoginPage = () => {
                         </Link>
                     </div>
                     </div>
-                </form>
+                </Form>
                 <div className="relative hidden bg-muted md:block">
                     <img
                     src={placeholder}

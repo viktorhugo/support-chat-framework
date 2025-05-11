@@ -1,28 +1,36 @@
 import {  LogOut, X } from 'lucide-react';
-import {  Outlet, useNavigate } from 'react-router';
+import {  Form, Outlet, redirect, useNavigate } from 'react-router';
 import { ContactList } from '~/chat/components/ContactList';
 import { ContactInfoHandler } from '~/chat/components/contact-info/ContactInfoHandler';
 import { Button } from '~/components/ui/button';
 import { getClient, getClients } from '~/fake/fake-data';
 import type { Route } from './+types/chat-layout';
+import { getSession } from '~/sessions.server';
 
 // Executed when the route is loaded, (RouteModule)
-export const loader = async () => {
+export const loader = async ({ request, context, params }: Route.LoaderArgs) => {
     console.log('Chat Layout loader called');
+    // get session
+    const session = await getSession(request.headers.get('Cookie'));
+    console.log('LoginLoader -userId exists in session?', session.has('userId'));
+
+    if (!session.has('userId')) {
+        return redirect('/auth/login');
+    }
     
     const clients = await getClients();
+    // console.log(loaderData); // Clients
     return clients;
 }
 
 const ChatLayout = ( { loaderData }: Route.ComponentProps ) => {
-    console.log(loaderData); // Clients
 
     const navigate = useNavigate();
     const logout = () => {
         // remove token
         localStorage.removeItem('token');
         // invalidate the query and refetch
-        navigate( "/auth", { replace: true})
+        navigate( "/auth/logout", { replace: true})
     };
     
     return (
@@ -37,10 +45,12 @@ const ChatLayout = ( { loaderData }: Route.ComponentProps ) => {
             </div>
             <ContactList clients={ loaderData } />
             <div className="p-4 border-t">
-                <Button variant={"default"} onClick={() => logout()} className="text-center w-full cursor-pointer" size={'sm'}>
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                </Button>
+                <Form method="post" action='/auth/logout'>
+                    <Button variant={"default"} onClick={() => logout()} className="text-center w-full cursor-pointer" size={'sm'}>
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                    </Button>
+                </Form>
             </div>
             </div>
 

@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { Navigate, redirect } from "react-router";
 
 export function meta( {}: Route.MetaArgs ) {
   return [
@@ -8,6 +8,10 @@ export function meta( {}: Route.MetaArgs ) {
   ];
 }
 
+export const loader = async () => { // no se ha cargado el componente
+  return redirect('/chat');
+} 
+
 export default function Home() {
-  return <Welcome />;
+  return <Navigate to="/chat" />
 }
