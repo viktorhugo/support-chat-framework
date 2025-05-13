@@ -9,6 +9,7 @@ import { commitSession, getSession } from "~/sessions.server";
 import { use, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Terminal } from "lucide-react";
+import { loginUser } from "~/fake/fake-data";
 
 
 export const loader = async ({ context, params, request }: Route.LoaderArgs) => {
@@ -58,8 +59,13 @@ export const loader = async ({ context, params, request }: Route.LoaderArgs) => 
             });
         }
 
-        session.set('userId', 'U1-12345');
-        session.set('token', 'token-1234567890');
+        const user = await loginUser();
+        console.log('user', user);
+
+        session.set('userId', user.id);
+        session.set('token', user.token);
+        session.set('name', user.name);
+        
         return redirect('/chat', {
             headers: {
                 'Set-Cookie': await commitSession(session),
@@ -83,11 +89,11 @@ const LoginPage = ({ loaderData, actionData, params }: Route.ComponentProps) => 
         navigate('/auth/testing')
     }
 
-    useEffect(() => {
-        if (actionData!.error) {
-            alert(actionData!.error);
-        }
-    }, [actionData?.error]);
+    // useEffect(() => {
+    //     if (actionData.error) {
+    //         alert(actionData.error);
+    //     }
+    // }, [actionData.error]);
 
     return (
         <div className={'flex flex-col gap-6'}>

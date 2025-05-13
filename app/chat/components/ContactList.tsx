@@ -32,7 +32,7 @@ export const ContactList = ({ clients }: ContactListProps ) => {
                                     <NavLink 
                                         key={client.id} 
                                         to={`/chat/client/${client.id}`} 
-                                        className={ ({ isActive  }) => 
+                                        className={ ({ isActive, isPending, isTransitioning   }) => 
                                             `w-full flex items-center justify-start pl-3 m-2 transition-all duration-300 ${ isActive 
                                                 ? 'bg-blue-100 text-primary font-medium rounded-md p-1' 
                                                 : 'hover:bg-muted/50 rounded-md'

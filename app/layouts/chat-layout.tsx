@@ -1,29 +1,56 @@
 import {  LogOut, X } from 'lucide-react';
-import {  Form, Outlet, redirect, useNavigate } from 'react-router';
+import {  Form, Link, Outlet, redirect, useNavigate } from 'react-router';
 import { ContactList } from '~/chat/components/ContactList';
 import { ContactInfoHandler } from '~/chat/components/contact-info/ContactInfoHandler';
 import { Button } from '~/components/ui/button';
-import { getClient, getClients } from '~/fake/fake-data';
+import { checkAuth, getClient, getClients } from '~/fake/fake-data';
 import type { Route } from './+types/chat-layout';
 import { getSession } from '~/sessions.server';
 
 // Executed when the route is loaded, (RouteModule)
 export const loader = async ({ request, context, params }: Route.LoaderArgs) => {
+
+    const { id } = params;
+
     console.log('Chat Layout loader called');
     // get session
     const session = await getSession(request.headers.get('Cookie'));
     console.log('LoginLoader -userId exists in session?', session.has('userId'));
-
+    const token = session.get('token');
+    const userName= session.get('name');
     if (!session.has('userId')) {
+        console.log('No found userId');
         return redirect('/auth/login');
     }
+
+    if (!token) {
+        console.log('No found token');
+        return redirect('/auth/login');
+    }
+    if (!userName) {
+        console.log('No found userName');
+        return redirect('/auth/login');
+    }
+    console.log('Session name', userName);
+    console.log('Session token', token);
+    console.log('Session userId', session.get('userId'));
+
+    // check auth 
+    const user = await checkAuth(token);
     
     const clients = await getClients();
+    if (id) {
+        const client = await getClient(id);
+        return { client, userName, clients };
+    }
     // console.log(loaderData); // Clients
-    return clients;
+    return { clients, userName };
+
 }
 
 const ChatLayout = ( { loaderData }: Route.ComponentProps ) => {
+
+    const { clients, userName, client } = loaderData;
 
     const navigate = useNavigate();
     const logout = () => {
@@ -40,10 +67,10 @@ const ChatLayout = ( { loaderData }: Route.ComponentProps ) => {
             <div className="p-4 border-b">
                 <div className="flex items-center gap-2">
                 <div className="h-6 w-6 rounded-full bg-primary" />
-                <span className="font-semibold">NexTalk</span>
+                <Link to="/chat" className="font-semibold">{ userName || 'UserName'}</Link>
                 </div>
             </div>
-            <ContactList clients={ loaderData } />
+            <ContactList clients={ clients } />
             <div className="p-4 border-t">
                 <Form method="post" action='/auth/logout'>
                     <Button variant={"default"} onClick={() => logout()} className="text-center w-full cursor-pointer" size={'sm'}>
@@ -79,7 +106,7 @@ const ChatLayout = ( { loaderData }: Route.ComponentProps ) => {
                 <div className="h-14 border-b px-4 flex items-center">
                     <h2 className="font-medium">Contact details</h2>
                 </div>
-                <ContactInfoHandler />
+                <ContactInfoHandler client={ client }/>
             </div>
             </div>
         </div>
